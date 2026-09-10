@@ -46,6 +46,46 @@ public enum WindowSizeOption: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+public enum ImagePreviewTrigger: String, CaseIterable, Identifiable, Codable {
+    case fullRow = "fullRow"
+    case thumbnailOnly = "thumbnailOnly"
+    case disabled = "disabled"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .fullRow: return "Tüm Satırın Üzerine Gelince"
+        case .thumbnailOnly: return "Yalnızca Küçük Görsele Gelince"
+        case .disabled: return "Önizlemeyi Gösterme"
+        }
+    }
+}
+
+public enum ImagePreviewSize: String, CaseIterable, Identifiable, Codable {
+    case small = "small"
+    case medium = "medium"
+    case large = "large"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .small: return "Küçük Önizleme (240 × 180)"
+        case .medium: return "Standart Önizleme (320 × 260)"
+        case .large: return "Büyük Önizleme (420 × 340)"
+        }
+    }
+
+    public var maxDimensions: (maxW: CGFloat, maxH: CGFloat) {
+        switch self {
+        case .small: return (240, 180)
+        case .medium: return (320, 260)
+        case .large: return (420, 340)
+        }
+    }
+}
+
 @MainActor
 public final class SettingsManager: ObservableObject {
     public static let shared = SettingsManager()
@@ -54,11 +94,19 @@ public final class SettingsManager: ObservableObject {
     @Published public var windowOpacity: Double = 0.85
     @Published public var windowSizeOption: WindowSizeOption = .medium
 
+    // Preview Settings
+    @Published public var previewTrigger: ImagePreviewTrigger = .fullRow
+    @Published public var previewSize: ImagePreviewSize = .medium
+    @Published public var previewOpacity: Double = 0.95
+
     public var onSizeChanged: ((WindowSizeOption) -> Void)?
     public var onOpacityChanged: ((Double) -> Void)?
 
     private let opacityKey = "pano_window_opacity"
     private let sizeKey = "pano_window_size"
+    private let previewTriggerKey = "pano_preview_trigger"
+    private let previewSizeKey = "pano_preview_size"
+    private let previewOpacityKey = "pano_preview_opacity"
 
     private init() {
         checkStatus()
@@ -79,6 +127,42 @@ public final class SettingsManager: ObservableObject {
         } else {
             self.windowSizeOption = .medium
         }
+
+        if let savedTriggerStr = UserDefaults.standard.string(forKey: previewTriggerKey),
+           let savedTrigger = ImagePreviewTrigger(rawValue: savedTriggerStr) {
+            self.previewTrigger = savedTrigger
+        } else {
+            self.previewTrigger = .fullRow
+        }
+
+        if let savedPreviewSizeStr = UserDefaults.standard.string(forKey: previewSizeKey),
+           let savedPreviewSize = ImagePreviewSize(rawValue: savedPreviewSizeStr) {
+            self.previewSize = savedPreviewSize
+        } else {
+            self.previewSize = .medium
+        }
+
+        let savedPrevOpacity = UserDefaults.standard.double(forKey: previewOpacityKey)
+        if savedPrevOpacity >= 0.20 && savedPrevOpacity <= 1.0 {
+            self.previewOpacity = savedPrevOpacity
+        } else {
+            self.previewOpacity = 0.95
+        }
+    }
+
+    public func setPreviewTrigger(_ trigger: ImagePreviewTrigger) {
+        self.previewTrigger = trigger
+        UserDefaults.standard.set(trigger.rawValue, forKey: previewTriggerKey)
+    }
+
+    public func setPreviewSize(_ size: ImagePreviewSize) {
+        self.previewSize = size
+        UserDefaults.standard.set(size.rawValue, forKey: previewSizeKey)
+    }
+
+    public func setPreviewOpacity(_ opacity: Double) {
+        self.previewOpacity = opacity
+        UserDefaults.standard.set(opacity, forKey: previewOpacityKey)
     }
 
     public func setOpacity(_ opacity: Double) {

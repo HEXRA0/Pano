@@ -297,6 +297,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func showImagePreview(for item: ClipboardItem) {
+        guard SettingsManager.shared.previewTrigger != .disabled else { return }
         guard let mainPanel = self.panel, mainPanel.isVisible else { return }
 
         if previewPanel == nil {

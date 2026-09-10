@@ -41,15 +41,17 @@ public final class ImagePreviewPanel: NSPanel {
             imageSize = img.size
         }
 
-        guard imageSize.width > 0 && imageSize.height > 0 else {
-            return CGSize(width: 260, height: 220)
-        }
+        let previewOption = SettingsManager.shared.previewSize
+        let dims = previewOption.maxDimensions
+        let maxW: CGFloat = dims.maxW
+        let maxH: CGFloat = dims.maxH
+        let minW: CGFloat = max(160, maxW * 0.6)
+        let minH: CGFloat = max(120, maxH * 0.6)
+        let chromeHeight: CGFloat = 48 // Header and footer combined
 
-        let maxW: CGFloat = 340
-        let maxH: CGFloat = 300
-        let minW: CGFloat = 200
-        let minH: CGFloat = 160
-        let chromeHeight: CGFloat = 52 // Header and footer combined
+        guard imageSize.width > 0 && imageSize.height > 0 else {
+            return CGSize(width: minW, height: minH)
+        }
 
         let ratio = imageSize.width / imageSize.height
 
@@ -86,6 +88,7 @@ public final class ImagePreviewPanel: NSPanel {
 
 public struct ImagePreviewView: View {
     let item: ClipboardItem
+    @ObservedObject var settings = SettingsManager.shared
 
     public var body: some View {
         VStack(spacing: 8) {
@@ -151,11 +154,18 @@ public struct ImagePreviewView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+        .background(
+            ZStack {
+                VisualEffectView(material: .popover, blendingMode: .behindWindow)
+                    .opacity(settings.previewOpacity)
+                Color(nsColor: .windowBackgroundColor)
+                    .opacity(0.18 * settings.previewOpacity)
+            }
+        )
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                .stroke(Color.primary.opacity(0.12 * max(0.6, settings.previewOpacity)), lineWidth: 0.5)
         )
     }
 

@@ -202,6 +202,49 @@ public struct ClipboardListView: View {
                     }
                 }
 
+                Menu("Görsel Önizleme Ayarları") {
+                    Menu("Önizleme Davranışı") {
+                        ForEach(ImagePreviewTrigger.allCases) { trigger in
+                            Button(action: {
+                                settings.setPreviewTrigger(trigger)
+                                if trigger == .disabled {
+                                    onDismissPreview?()
+                                }
+                            }) {
+                                Text("\(trigger.title)\(settings.previewTrigger == trigger ? " ✓" : "")")
+                            }
+                        }
+                    }
+
+                    Menu("Önizleme Boyutu") {
+                        ForEach(ImagePreviewSize.allCases) { size in
+                            Button(action: {
+                                settings.setPreviewSize(size)
+                            }) {
+                                Text("\(size.title)\(settings.previewSize == size ? " ✓" : "")")
+                            }
+                        }
+                    }
+
+                    Menu("Önizleme Opaklığı (%\(Int(settings.previewOpacity * 100)))") {
+                        Button(action: { settings.setPreviewOpacity(1.0) }) {
+                            Text("%100 (Tam Opak)\(settings.previewOpacity == 1.0 ? " ✓" : "")")
+                        }
+                        Button(action: { settings.setPreviewOpacity(0.95) }) {
+                            Text("%95 (Buzlu Cam)\(settings.previewOpacity == 0.95 ? " ✓" : "")")
+                        }
+                        Button(action: { settings.setPreviewOpacity(0.80) }) {
+                            Text("%80 (Hafif Şeffaf)\(settings.previewOpacity == 0.80 ? " ✓" : "")")
+                        }
+                        Button(action: { settings.setPreviewOpacity(0.60) }) {
+                            Text("%60 (Yarı Saydam)\(settings.previewOpacity == 0.60 ? " ✓" : "")")
+                        }
+                        Button(action: { settings.setPreviewOpacity(0.40) }) {
+                            Text("%40 (Ultra Saydam)\(settings.previewOpacity == 0.40 ? " ✓" : "")")
+                        }
+                    }
+                }
+
                 Divider()
 
                 Button("Sabitlenmeyenleri Temizle") {
@@ -284,7 +327,7 @@ public struct ClipboardListView: View {
                         proxy.scrollTo(filteredItems[newIndex].id, anchor: .center)
                     }
                     let current = filteredItems[newIndex]
-                    if isImageItem(current) {
+                    if isImageItem(current) && settings.previewTrigger == .fullRow {
                         onPreviewItem?(current)
                     } else {
                         onDismissPreview?()
@@ -407,9 +450,9 @@ public struct ClipboardListView: View {
         .onHover { hovering in
             if hovering {
                 selection.selectedIndex = index
-                if isImageItem(item) {
+                if isImageItem(item) && settings.previewTrigger == .fullRow {
                     onPreviewItem?(item)
-                } else {
+                } else if settings.previewTrigger != .thumbnailOnly {
                     onDismissPreview?()
                 }
             } else {
@@ -421,58 +464,75 @@ public struct ClipboardListView: View {
     // MARK: - Apple Squircle Type Badge
     @ViewBuilder
     private func itemTypeBadge(for item: ClipboardItem, isSelected: Bool) -> some View {
-        switch item.type {
-        case .text:
-            ZStack {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(isSelected ? Color.white.opacity(0.25) : Color.blue.opacity(0.14))
-                Image(systemName: "doc.text.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(isSelected ? .white : .blue)
-            }
-            .frame(width: 26, height: 26)
+        let isImage = isImageItem(item)
 
-        case .image:
-            if let data = item.imageData, let nsImage = NSImage(data: data) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 26, height: 26)
-                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
-                    )
-            } else {
+        let badge = Group {
+            switch item.type {
+            case .text:
                 ZStack {
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(isSelected ? Color.white.opacity(0.25) : Color.purple.opacity(0.14))
-                    Image(systemName: "photo.fill")
+                        .fill(isSelected ? Color.white.opacity(0.25) : Color.blue.opacity(0.14))
+                    Image(systemName: "doc.text.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(isSelected ? .white : .purple)
+                        .foregroundColor(isSelected ? .white : .blue)
+                }
+                .frame(width: 26, height: 26)
+
+            case .image:
+                if let data = item.imageData, let nsImage = NSImage(data: data) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 26, height: 26)
+                        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
+                        )
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(isSelected ? Color.white.opacity(0.25) : Color.purple.opacity(0.14))
+                        Image(systemName: "photo.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(isSelected ? .white : .purple)
+                    }
+                    .frame(width: 26, height: 26)
+                }
+
+            case .fileURL:
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(isSelected ? Color.white.opacity(0.25) : Color.green.opacity(0.14))
+                    Image(systemName: "doc.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(isSelected ? .white : .green)
+                }
+                .frame(width: 26, height: 26)
+
+            case .rtf:
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(isSelected ? Color.white.opacity(0.25) : Color.orange.opacity(0.14))
+                    Image(systemName: "doc.richtext.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(isSelected ? .white : .orange)
                 }
                 .frame(width: 26, height: 26)
             }
+        }
 
-        case .fileURL:
-            ZStack {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(isSelected ? Color.white.opacity(0.25) : Color.green.opacity(0.14))
-                Image(systemName: "doc.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(isSelected ? .white : .green)
-            }
-            .frame(width: 26, height: 26)
-
-        case .rtf:
-            ZStack {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(isSelected ? Color.white.opacity(0.25) : Color.orange.opacity(0.14))
-                Image(systemName: "doc.richtext.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(isSelected ? .white : .orange)
-            }
-            .frame(width: 26, height: 26)
+        if isImage && settings.previewTrigger == .thumbnailOnly {
+            badge
+                .onHover { badgeHovering in
+                    if badgeHovering {
+                        onPreviewItem?(item)
+                    } else {
+                        onDismissPreview?()
+                    }
+                }
+        } else {
+            badge
         }
     }
 
