@@ -55,11 +55,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupPanel() {
-        let panelWidth: CGFloat = 380
-        let panelHeight: CGFloat = 490
-        let panelRect = NSRect(x: 0, y: 0, width: panelWidth, height: panelHeight)
+        let initialSize = SettingsManager.shared.windowSizeOption.size
+        let panelRect = NSRect(x: 0, y: 0, width: initialSize.width, height: initialSize.height)
 
         let floatingPanel = FloatingPanel(contentRect: panelRect)
+        floatingPanel.alphaValue = CGFloat(SettingsManager.shared.windowOpacity)
 
         let contentView = ClipboardListView(
             searchText: Binding(
@@ -142,7 +142,35 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.updatePreviewPosition(at: mouseLocation)
         }
 
+        SettingsManager.shared.onSizeChanged = { [weak self] newOption in
+            self?.updateWindowSize(option: newOption)
+        }
+
+        SettingsManager.shared.onOpacityChanged = { [weak self] newOpacity in
+            self?.panel?.alphaValue = CGFloat(newOpacity)
+        }
+
         self.panel = floatingPanel
+    }
+
+    public func updateWindowSize(option: WindowSizeOption) {
+        guard let panel = self.panel else { return }
+        let newSize = option.size
+        let currentFrame = panel.frame
+
+        let oldTop = currentFrame.maxY
+        let oldMidX = currentFrame.midX
+
+        var newX = oldMidX - (newSize.width / 2)
+        var newY = oldTop - newSize.height
+
+        let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens.first!
+        let visible = screen.visibleFrame
+        newX = max(visible.minX + 8, min(newX, visible.maxX - newSize.width - 8))
+        newY = max(visible.minY + 8, min(newY, visible.maxY - newSize.height - 8))
+
+        let newFrame = NSRect(x: newX, y: newY, width: newSize.width, height: newSize.height)
+        panel.setFrame(newFrame, display: true, animate: true)
     }
 
     public func getFilteredItems() -> [ClipboardItem] {
@@ -232,6 +260,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        panel.alphaValue = CGFloat(SettingsManager.shared.windowOpacity)
         panel.setFrameOrigin(targetPoint)
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

@@ -4,6 +4,7 @@ import AppKit
 public struct ClipboardListView: View {
     @ObservedObject var store = ClipboardStore.shared
     @ObservedObject var selection = SelectionManager.shared
+    @ObservedObject var settings = SettingsManager.shared
     @Binding var searchText: String
     var onSelectItem: (ClipboardItem) -> Void
     var onClose: () -> Void
@@ -72,7 +73,7 @@ public struct ClipboardListView: View {
                     }
                 }
         }
-        .frame(width: 380, height: 490)
+        .frame(width: settings.windowSizeOption.size.width, height: settings.windowSizeOption.size.height)
         .background(
             VisualEffectView(material: .popover, blendingMode: .behindWindow)
         )
@@ -144,6 +145,34 @@ public struct ClipboardListView: View {
                     Button("150 öğe") { store.maxHistoryCount = 150 }
                     Button("300 öğe") { store.maxHistoryCount = 300 }
                     Button("500 öğe") { store.maxHistoryCount = 500 }
+                }
+
+                Menu("Pencere Boyutu (\(settings.windowSizeOption.title))") {
+                    ForEach(WindowSizeOption.allCases) { option in
+                        Button(action: {
+                            settings.setWindowSize(option)
+                        }) {
+                            Text("\(option.title)\(settings.windowSizeOption == option ? " ✓" : "")")
+                        }
+                    }
+                }
+
+                Menu("Pencere Opaklığı (%\(Int(settings.windowOpacity * 100)))") {
+                    Button(action: { settings.setOpacity(1.0) }) {
+                        Text("%100 (Tam Opak)\(settings.windowOpacity == 1.0 ? " ✓" : "")")
+                    }
+                    Button(action: { settings.setOpacity(0.95) }) {
+                        Text("%95 (Hafif Şeffaf)\(settings.windowOpacity == 0.95 ? " ✓" : "")")
+                    }
+                    Button(action: { settings.setOpacity(0.85) }) {
+                        Text("%85 (Buzlu Cam)\(settings.windowOpacity == 0.85 ? " ✓" : "")")
+                    }
+                    Button(action: { settings.setOpacity(0.75) }) {
+                        Text("%75 (Daha Şeffaf)\(settings.windowOpacity == 0.75 ? " ✓" : "")")
+                    }
+                    Button(action: { settings.setOpacity(0.65) }) {
+                        Text("%65 (Ultra Şeffaf)\(settings.windowOpacity == 0.65 ? " ✓" : "")")
+                    }
                 }
 
                 Divider()
