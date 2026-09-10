@@ -59,7 +59,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let panelRect = NSRect(x: 0, y: 0, width: initialSize.width, height: initialSize.height)
 
         let floatingPanel = FloatingPanel(contentRect: panelRect)
-        floatingPanel.alphaValue = CGFloat(SettingsManager.shared.windowOpacity)
+        floatingPanel.alphaValue = 1.0
 
         let contentView = ClipboardListView(
             searchText: Binding(
@@ -82,6 +82,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onDismissPreview: { [weak self] in
                 self?.hideImagePreview()
+            },
+            onHeightChange: { [weak self] newHeight in
+                self?.adjustPanelHeight(newHeight)
             }
         )
 
@@ -146,30 +149,50 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.updateWindowSize(option: newOption)
         }
 
-        SettingsManager.shared.onOpacityChanged = { [weak self] newOpacity in
-            self?.panel?.alphaValue = CGFloat(newOpacity)
+        SettingsManager.shared.onOpacityChanged = { [weak self] _ in
+            // Window background opacity is handled inside SwiftUI view to keep texts sharp and opaque
+            self?.panel?.alphaValue = 1.0
         }
 
         self.panel = floatingPanel
     }
 
+    public func adjustPanelHeight(_ newHeight: CGFloat) {
+        guard let panel = self.panel else { return }
+        let currentFrame = panel.frame
+        let targetHeight = ceil(newHeight)
+        if abs(currentFrame.height - targetHeight) < 1 { return }
+
+        // Anchor window at the top: keep maxY constant
+        let oldTop = currentFrame.maxY
+        let newY = oldTop - targetHeight
+
+        let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens.first!
+        let visible = screen.visibleFrame
+        let clampedY = max(visible.minY + 8, min(newY, visible.maxY - targetHeight - 8))
+
+        let newFrame = NSRect(x: currentFrame.origin.x, y: clampedY, width: currentFrame.width, height: targetHeight)
+        panel.setFrame(newFrame, display: true, animate: panel.isVisible)
+    }
+
     public func updateWindowSize(option: WindowSizeOption) {
         guard let panel = self.panel else { return }
-        let newSize = option.size
         let currentFrame = panel.frame
+        let targetWidth = option.width
+        let targetHeight = min(currentFrame.height, option.maxHeight)
 
         let oldTop = currentFrame.maxY
         let oldMidX = currentFrame.midX
 
-        var newX = oldMidX - (newSize.width / 2)
-        var newY = oldTop - newSize.height
+        var newX = oldMidX - (targetWidth / 2)
+        var newY = oldTop - targetHeight
 
         let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens.first!
         let visible = screen.visibleFrame
-        newX = max(visible.minX + 8, min(newX, visible.maxX - newSize.width - 8))
-        newY = max(visible.minY + 8, min(newY, visible.maxY - newSize.height - 8))
+        newX = max(visible.minX + 8, min(newX, visible.maxX - targetWidth - 8))
+        newY = max(visible.minY + 8, min(newY, visible.maxY - targetHeight - 8))
 
-        let newFrame = NSRect(x: newX, y: newY, width: newSize.width, height: newSize.height)
+        let newFrame = NSRect(x: newX, y: newY, width: targetWidth, height: targetHeight)
         panel.setFrame(newFrame, display: true, animate: true)
     }
 
@@ -260,7 +283,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        panel.alphaValue = CGFloat(SettingsManager.shared.windowOpacity)
         panel.setFrameOrigin(targetPoint)
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

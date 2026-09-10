@@ -3,29 +3,46 @@ import AppKit
 import ServiceManagement
 
 public enum WindowSizeOption: String, CaseIterable, Identifiable, Codable {
+    case mini
+    case compact
     case small
     case medium
     case large
-    case extraLarge
 
     public var id: String { rawValue }
 
     public var title: String {
         switch self {
-        case .small: return "Küçük (340 × 430)"
-        case .medium: return "Standart (380 × 490)"
+        case .mini: return "Mini (280 × 340)"
+        case .compact: return "Kompakt (310 × 390)"
+        case .small: return "Küçük (340 × 440)"
+        case .medium: return "Standart (380 × 500)"
         case .large: return "Büyük (440 × 580)"
-        case .extraLarge: return "Geniş (500 × 660)"
+        }
+    }
+
+    public var width: CGFloat {
+        switch self {
+        case .mini: return 280
+        case .compact: return 310
+        case .small: return 340
+        case .medium: return 380
+        case .large: return 440
+        }
+    }
+
+    public var maxHeight: CGFloat {
+        switch self {
+        case .mini: return 340
+        case .compact: return 390
+        case .small: return 440
+        case .medium: return 500
+        case .large: return 580
         }
     }
 
     public var size: CGSize {
-        switch self {
-        case .small: return CGSize(width: 340, height: 430)
-        case .medium: return CGSize(width: 380, height: 490)
-        case .large: return CGSize(width: 440, height: 580)
-        case .extraLarge: return CGSize(width: 500, height: 660)
-        }
+        CGSize(width: width, height: maxHeight)
     }
 }
 
@@ -34,7 +51,7 @@ public final class SettingsManager: ObservableObject {
     public static let shared = SettingsManager()
 
     @Published public var launchAtLogin: Bool = false
-    @Published public var windowOpacity: Double = 0.95
+    @Published public var windowOpacity: Double = 0.85
     @Published public var windowSizeOption: WindowSizeOption = .medium
 
     public var onSizeChanged: ((WindowSizeOption) -> Void)?
@@ -50,10 +67,10 @@ public final class SettingsManager: ObservableObject {
 
     private func loadPreferences() {
         let savedOpacity = UserDefaults.standard.double(forKey: opacityKey)
-        if savedOpacity >= 0.5 && savedOpacity <= 1.0 {
+        if savedOpacity >= 0.20 && savedOpacity <= 1.0 {
             self.windowOpacity = savedOpacity
         } else {
-            self.windowOpacity = 0.95
+            self.windowOpacity = 0.85
         }
 
         if let savedSizeStr = UserDefaults.standard.string(forKey: sizeKey),

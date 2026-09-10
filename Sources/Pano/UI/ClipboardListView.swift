@@ -10,6 +10,7 @@ public struct ClipboardListView: View {
     var onClose: () -> Void
     var onPreviewItem: ((ClipboardItem) -> Void)?
     var onDismissPreview: (() -> Void)?
+    var onHeightChange: ((CGFloat) -> Void)?
 
     @FocusState private var isSearchFocused: Bool
     @State private var isConfirmingClear: Bool = false
@@ -19,13 +20,15 @@ public struct ClipboardListView: View {
         onSelectItem: @escaping (ClipboardItem) -> Void,
         onClose: @escaping () -> Void,
         onPreviewItem: ((ClipboardItem) -> Void)? = nil,
-        onDismissPreview: (() -> Void)? = nil
+        onDismissPreview: (() -> Void)? = nil,
+        onHeightChange: ((CGFloat) -> Void)? = nil
     ) {
         self._searchText = searchText
         self.onSelectItem = onSelectItem
         self.onClose = onClose
         self.onPreviewItem = onPreviewItem
         self.onDismissPreview = onDismissPreview
+        self.onHeightChange = onHeightChange
     }
 
     private var filteredItems: [ClipboardItem] {
@@ -37,6 +40,17 @@ public struct ClipboardListView: View {
                 (item.textContent?.localizedCaseInsensitiveContains(searchText) ?? false)
             }
         }
+    }
+
+    public var dynamicHeight: CGFloat {
+        let maxAllowed = settings.windowSizeOption.maxHeight
+        let count = filteredItems.count
+        if count == 0 {
+            return min(210, maxAllowed)
+        }
+        // Header ~48, Footer ~38, item row ~45 + padding
+        let calculated = CGFloat(48 + 38 + (count * 45) + 12)
+        return min(calculated, maxAllowed)
     }
 
     public var body: some View {
@@ -73,16 +87,27 @@ public struct ClipboardListView: View {
                     }
                 }
         }
-        .frame(width: settings.windowSizeOption.size.width, height: settings.windowSizeOption.size.height)
+        .frame(width: settings.windowSizeOption.width, height: dynamicHeight)
         .background(
-            VisualEffectView(material: .popover, blendingMode: .behindWindow)
+            ZStack {
+                VisualEffectView(material: .popover, blendingMode: .behindWindow)
+                    .opacity(settings.windowOpacity)
+                Color(nsColor: .windowBackgroundColor)
+                    .opacity(0.18 * settings.windowOpacity)
+            }
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
+                .stroke(Color.primary.opacity(0.12 * max(0.6, settings.windowOpacity)), lineWidth: 0.5)
         )
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: filteredItems.count)
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: settings.windowSizeOption)
+        .onChange(of: dynamicHeight) { newHeight in
+            onHeightChange?(newHeight)
+        }
         .onAppear {
+            onHeightChange?(dynamicHeight)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 isSearchFocused = true
             }
@@ -161,17 +186,20 @@ public struct ClipboardListView: View {
                     Button(action: { settings.setOpacity(1.0) }) {
                         Text("%100 (Tam Opak)\(settings.windowOpacity == 1.0 ? " ✓" : "")")
                     }
-                    Button(action: { settings.setOpacity(0.95) }) {
-                        Text("%95 (Hafif Şeffaf)\(settings.windowOpacity == 0.95 ? " ✓" : "")")
-                    }
                     Button(action: { settings.setOpacity(0.85) }) {
                         Text("%85 (Buzlu Cam)\(settings.windowOpacity == 0.85 ? " ✓" : "")")
                     }
-                    Button(action: { settings.setOpacity(0.75) }) {
-                        Text("%75 (Daha Şeffaf)\(settings.windowOpacity == 0.75 ? " ✓" : "")")
+                    Button(action: { settings.setOpacity(0.70) }) {
+                        Text("%70 (Hafif Şeffaf)\(settings.windowOpacity == 0.70 ? " ✓" : "")")
                     }
-                    Button(action: { settings.setOpacity(0.65) }) {
-                        Text("%65 (Ultra Şeffaf)\(settings.windowOpacity == 0.65 ? " ✓" : "")")
+                    Button(action: { settings.setOpacity(0.50) }) {
+                        Text("%50 (Yarı Saydam)\(settings.windowOpacity == 0.50 ? " ✓" : "")")
+                    }
+                    Button(action: { settings.setOpacity(0.35) }) {
+                        Text("%35 (Ultra Saydam)\(settings.windowOpacity == 0.35 ? " ✓" : "")")
+                    }
+                    Button(action: { settings.setOpacity(0.20) }) {
+                        Text("%20 (Maksimum Saydam)\(settings.windowOpacity == 0.20 ? " ✓" : "")")
                     }
                 }
 
