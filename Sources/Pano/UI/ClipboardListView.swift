@@ -46,10 +46,11 @@ public struct ClipboardListView: View {
         let maxAllowed = settings.windowSizeOption.maxHeight
         let count = filteredItems.count
         if count == 0 {
-            return min(210, maxAllowed)
+            // Generous height for empty view so header and footer never overlap or blur
+            return min(260, maxAllowed)
         }
-        // Header ~48, Footer ~38, item row ~45 + padding
-        let calculated = CGFloat(48 + 38 + (count * 45) + 12)
+        // Header (50) + Footer (42) + List rows (count * 46) + list padding (12)
+        let calculated = CGFloat(50 + 42 + (count * 46) + 12)
         return min(calculated, maxAllowed)
     }
 
@@ -101,8 +102,6 @@ public struct ClipboardListView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.primary.opacity(0.12 * max(0.6, settings.windowOpacity)), lineWidth: 0.5)
         )
-        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: filteredItems.count)
-        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: settings.windowSizeOption)
         .onChange(of: dynamicHeight) { newHeight in
             onHeightChange?(newHeight)
         }
@@ -219,10 +218,11 @@ public struct ClipboardListView: View {
 
                 Menu("Kısayol Bilgisi") {
                     Text("Pano'yu Aç: ⇧⌘C veya ⇧⌘V")
-                    Text("Öğe Seç / Kopyala: Enter veya Tıkla")
+                    Text("Öğe Seç / Kopyala: ↵ (Enter) veya Tıkla")
+                    Text("Öğeyi Sil: ⌫ (Delete) veya ⌘⌫")
                     Text("Hızlı Seçim: ⌘1 ... ⌘9")
+                    Text("Yukarı / Aşağı: ↑ / ↓")
                     Text("Pencereyi Kapat: ESC")
-                    Text("Öğeyi Sil: Delete veya ⌘⌫")
                 }
 
                 Divider()
@@ -487,50 +487,50 @@ public struct ClipboardListView: View {
 
     // MARK: - Empty State (Apple System Style)
     private var emptyView: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             Spacer()
 
             ZStack {
                 Circle()
                     .fill(Color.primary.opacity(0.04))
-                    .frame(width: 68, height: 68)
+                    .frame(width: 52, height: 52)
 
                 Image(systemName: searchText.isEmpty ? "doc.on.clipboard" : "magnifyingglass")
-                    .font(.system(size: 28))
+                    .font(.system(size: 22))
                     .foregroundColor(.secondary.opacity(0.7))
             }
 
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Text(searchText.isEmpty ? "Pano Geçmişi Boş" : "Eşleşen Sonuç Yok")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
 
                 Text(searchText.isEmpty ? "Kopyaladığınız metinler ve görseller burada listelenecektir." : "Farklı bir arama terimi deneyin.")
-                    .font(.system(size: 12))
+                    .font(.system(size: 11.5))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 20)
             }
 
             if searchText.isEmpty {
                 HStack(spacing: 5) {
                     Text("⇧⌘C")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2.5)
                         .background(Color.primary.opacity(0.06))
-                        .cornerRadius(5)
+                        .cornerRadius(4)
 
                     Text("veya")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10.5))
                         .foregroundColor(.secondary)
 
                     Text("⇧⌘V")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2.5)
                         .background(Color.primary.opacity(0.06))
-                        .cornerRadius(5)
+                        .cornerRadius(4)
                 }
                 .foregroundColor(.secondary)
             }
@@ -602,13 +602,6 @@ public struct ClipboardListView: View {
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundColor(.secondary)
 
-                    Text("•")
-                        .foregroundColor(.secondary.opacity(0.5))
-
-                    Text("↵ kopyala  •  ⌫ sil")
-                        .font(.system(size: 10.5))
-                        .foregroundColor(.secondary.opacity(0.7))
-
                     Spacer()
 
                     Button(action: {
@@ -616,19 +609,15 @@ public struct ClipboardListView: View {
                             isConfirmingClear = true
                         }
                     }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 11))
-                            Text("Temizle")
-                                .font(.system(size: 11))
-                        }
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3.5)
-                        .background(Color.primary.opacity(0.05))
-                        .cornerRadius(5)
+                        Image(systemName: "trash")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .padding(5)
+                            .background(Color.primary.opacity(0.05))
+                            .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .help("Geçmişi Temizle")
 
                     Button(action: {
                         NSApplication.shared.terminate(nil)
@@ -644,7 +633,7 @@ public struct ClipboardListView: View {
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 9)
+                .padding(.vertical, 8)
             }
         }
     }
