@@ -46,7 +46,7 @@ public enum WindowSizeOption: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-public enum ImagePreviewTrigger: String, CaseIterable, Identifiable, Codable {
+public enum PreviewTrigger: String, CaseIterable, Identifiable, Codable {
     case fullRow = "fullRow"
     case thumbnailOnly = "thumbnailOnly"
     case disabled = "disabled"
@@ -56,13 +56,13 @@ public enum ImagePreviewTrigger: String, CaseIterable, Identifiable, Codable {
     public var title: String {
         switch self {
         case .fullRow: return "Tüm Satırın Üzerine Gelince"
-        case .thumbnailOnly: return "Yalnızca Küçük Görsele Gelince"
+        case .thumbnailOnly: return "Yalnızca Küçük İkonun/Görselin Üzerine Gelince"
         case .disabled: return "Önizlemeyi Gösterme"
         }
     }
 }
 
-public enum ImagePreviewSize: String, CaseIterable, Identifiable, Codable {
+public enum PreviewSize: String, CaseIterable, Identifiable, Codable {
     case small = "small"
     case medium = "medium"
     case large = "large"
@@ -95,8 +95,8 @@ public final class SettingsManager: ObservableObject {
     @Published public var windowSizeOption: WindowSizeOption = .medium
 
     // Preview Settings
-    @Published public var previewTrigger: ImagePreviewTrigger = .fullRow
-    @Published public var previewSize: ImagePreviewSize = .medium
+    @Published public var previewTrigger: PreviewTrigger = .fullRow
+    @Published public var previewSize: PreviewSize = .medium
     @Published public var previewOpacity: Double = 0.95
 
     public var onSizeChanged: ((WindowSizeOption) -> Void)?
@@ -129,14 +129,14 @@ public final class SettingsManager: ObservableObject {
         }
 
         if let savedTriggerStr = UserDefaults.standard.string(forKey: previewTriggerKey),
-           let savedTrigger = ImagePreviewTrigger(rawValue: savedTriggerStr) {
+           let savedTrigger = PreviewTrigger(rawValue: savedTriggerStr) {
             self.previewTrigger = savedTrigger
         } else {
             self.previewTrigger = .fullRow
         }
 
         if let savedPreviewSizeStr = UserDefaults.standard.string(forKey: previewSizeKey),
-           let savedPreviewSize = ImagePreviewSize(rawValue: savedPreviewSizeStr) {
+           let savedPreviewSize = PreviewSize(rawValue: savedPreviewSizeStr) {
             self.previewSize = savedPreviewSize
         } else {
             self.previewSize = .medium
@@ -150,12 +150,12 @@ public final class SettingsManager: ObservableObject {
         }
     }
 
-    public func setPreviewTrigger(_ trigger: ImagePreviewTrigger) {
+    public func setPreviewTrigger(_ trigger: PreviewTrigger) {
         self.previewTrigger = trigger
         UserDefaults.standard.set(trigger.rawValue, forKey: previewTriggerKey)
     }
 
-    public func setPreviewSize(_ size: ImagePreviewSize) {
+    public func setPreviewSize(_ size: PreviewSize) {
         self.previewSize = size
         UserDefaults.standard.set(size.rawValue, forKey: previewSizeKey)
     }

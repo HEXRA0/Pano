@@ -33,6 +33,23 @@ public final class ImagePreviewPanel: NSPanel {
     }
 
     public static func calculateSize(for item: ClipboardItem) -> CGSize {
+        let previewOption = SettingsManager.shared.previewSize
+        let dims = previewOption.maxDimensions
+        let maxW: CGFloat = dims.maxW
+        let maxH: CGFloat = dims.maxH
+        let minW: CGFloat = max(180, maxW * 0.6)
+        let minH: CGFloat = max(130, maxH * 0.6)
+        let chromeHeight: CGFloat = 48
+
+        // If it's a text item without image
+        if item.type == .text || item.type == .rtf || (item.imageData == nil && item.textContent != nil) {
+            let text = item.textContent ?? ""
+            let approxLines = max(3, text.components(separatedBy: "\n").count)
+            let estimatedH = min(maxH, max(minH, CGFloat(approxLines * 18 + 70)))
+            let estimatedW = min(maxW, max(minW, 300))
+            return CGSize(width: estimatedW, height: estimatedH)
+        }
+
         var imageSize = CGSize(width: 300, height: 220)
 
         if let data = item.imageData, let img = NSImage(data: data) {
@@ -40,14 +57,6 @@ public final class ImagePreviewPanel: NSPanel {
         } else if let paths = item.filePaths, let first = paths.first, let img = NSImage(contentsOfFile: first) {
             imageSize = img.size
         }
-
-        let previewOption = SettingsManager.shared.previewSize
-        let dims = previewOption.maxDimensions
-        let maxW: CGFloat = dims.maxW
-        let maxH: CGFloat = dims.maxH
-        let minW: CGFloat = max(160, maxW * 0.6)
-        let minH: CGFloat = max(120, maxH * 0.6)
-        let chromeHeight: CGFloat = 48 // Header and footer combined
 
         guard imageSize.width > 0 && imageSize.height > 0 else {
             return CGSize(width: minW, height: minH)
@@ -90,15 +99,19 @@ public struct ImagePreviewView: View {
     let item: ClipboardItem
     @ObservedObject var settings = SettingsManager.shared
 
+    private var isTextOnly: Bool {
+        item.imageData == nil && itemImage == nil && item.textContent != nil
+    }
+
     public var body: some View {
         VStack(spacing: 8) {
             // Header Bar
             HStack(spacing: 6) {
-                Image(systemName: "photo.fill")
+                Image(systemName: isTextOnly ? "doc.text.fill" : "photo.fill")
                     .font(.system(size: 11))
-                    .foregroundColor(.purple)
+                    .foregroundColor(isTextOnly ? .blue : .purple)
 
-                Text("Önizleme")
+                Text(isTextOnly ? "Metin Önizleme" : "Görsel Önizleme")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.secondary)
 
@@ -112,10 +125,18 @@ public struct ImagePreviewView: View {
                         .padding(.vertical, 1.5)
                         .background(Color.primary.opacity(0.06))
                         .cornerRadius(4)
+                } else if let text = item.textContent {
+                    Text("\(text.count) karakter")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1.5)
+                        .background(Color.primary.opacity(0.06))
+                        .cornerRadius(4)
                 }
             }
 
-            // Image Display
+            // Content Display (Image or Full Text)
             if let nsImage = itemImage {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
@@ -129,9 +150,25 @@ public struct ImagePreviewView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1.5)
+            } else if let text = item.textContent {
+                ScrollView {
+                    Text(text)
+                        .font(.system(size: 12, design: .default))
+                        .foregroundColor(.primary)
+                        .lineSpacing(3)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(8)
+                        .textSelection(.enabled)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.primary.opacity(0.03))
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Spacer()
-                Text("Görsel yüklenemedi")
+                Text("Önizleme bulunamadı")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -147,6 +184,11 @@ public struct ImagePreviewView: View {
 
                 if let data = item.imageData {
                     Text(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.secondary)
+                } else if let text = item.textContent {
+                    let wordCount = text.split { $0.isWhitespace || $0.isNewline }.count
+                    Text("\(wordCount) kelime")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundColor(.secondary)
                 }

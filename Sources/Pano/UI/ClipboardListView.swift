@@ -202,9 +202,9 @@ public struct ClipboardListView: View {
                     }
                 }
 
-                Menu("Görsel Önizleme Ayarları") {
+                Menu("Önizleme Ayarları (Görsel & Metin)") {
                     Menu("Önizleme Davranışı") {
-                        ForEach(ImagePreviewTrigger.allCases) { trigger in
+                        ForEach(PreviewTrigger.allCases) { trigger in
                             Button(action: {
                                 settings.setPreviewTrigger(trigger)
                                 if trigger == .disabled {
@@ -217,7 +217,7 @@ public struct ClipboardListView: View {
                     }
 
                     Menu("Önizleme Boyutu") {
-                        ForEach(ImagePreviewSize.allCases) { size in
+                        ForEach(PreviewSize.allCases) { size in
                             Button(action: {
                                 settings.setPreviewSize(size)
                             }) {
@@ -323,14 +323,13 @@ public struct ClipboardListView: View {
             }
             .onChange(of: selection.selectedIndex) { newIndex in
                 if newIndex >= 0 && newIndex < filteredItems.count {
-                    withAnimation(.easeOut(duration: 0.12)) {
-                        proxy.scrollTo(filteredItems[newIndex].id, anchor: .center)
-                    }
                     let current = filteredItems[newIndex]
-                    if isImageItem(current) && settings.previewTrigger == .fullRow {
-                        onPreviewItem?(current)
-                    } else {
-                        onDismissPreview?()
+                    if settings.previewTrigger == .fullRow {
+                        if isImageItem(current) || isLongTextItem(current) {
+                            onPreviewItem?(current)
+                        } else {
+                            onDismissPreview?()
+                        }
                     }
                 }
             }
@@ -450,7 +449,8 @@ public struct ClipboardListView: View {
         .onHover { hovering in
             if hovering {
                 selection.selectedIndex = index
-                if isImageItem(item) && settings.previewTrigger == .fullRow {
+                let isPreviewable = isImageItem(item) || isLongTextItem(item)
+                if isPreviewable && settings.previewTrigger == .fullRow {
                     onPreviewItem?(item)
                 } else if settings.previewTrigger != .thumbnailOnly {
                     onDismissPreview?()
@@ -465,6 +465,8 @@ public struct ClipboardListView: View {
     @ViewBuilder
     private func itemTypeBadge(for item: ClipboardItem, isSelected: Bool) -> some View {
         let isImage = isImageItem(item)
+        let isLongText = isLongTextItem(item)
+        let isPreviewable = isImage || isLongText
 
         let badge = Group {
             switch item.type {
@@ -522,12 +524,14 @@ public struct ClipboardListView: View {
             }
         }
 
-        if isImage && settings.previewTrigger == .thumbnailOnly {
+        // Show preview when hovering directly over badge in thumbnailOnly mode,
+        // or for long text items so user can inspect the full text
+        if isPreviewable && (settings.previewTrigger == .thumbnailOnly || (isLongText && settings.previewTrigger != .disabled)) {
             badge
                 .onHover { badgeHovering in
                     if badgeHovering {
                         onPreviewItem?(item)
-                    } else {
+                    } else if settings.previewTrigger == .thumbnailOnly {
                         onDismissPreview?()
                     }
                 }
@@ -543,6 +547,12 @@ public struct ClipboardListView: View {
             return ["png", "jpg", "jpeg", "gif", "webp", "tiff", "heic"].contains(ext)
         }
         return false
+    }
+
+    private func isLongTextItem(_ item: ClipboardItem) -> Bool {
+        guard let text = item.textContent else { return false }
+        // Considered long if more than 60 characters or contains newlines
+        return text.count > 60 || text.contains("\n")
     }
 
     // MARK: - Empty State (Apple System Style)
