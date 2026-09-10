@@ -321,6 +321,12 @@ public struct ClipboardListView: View {
                 .padding(.vertical, 6)
                 .padding(.horizontal, 8)
             }
+            .onChange(of: selection.scrollTargetId) { targetId in
+                guard let targetId = targetId else { return }
+                withAnimation(.easeOut(duration: 0.12)) {
+                    proxy.scrollTo(targetId, anchor: nil)
+                }
+            }
             .onChange(of: selection.selectedIndex) { newIndex in
                 if newIndex >= 0 && newIndex < filteredItems.count {
                     let current = filteredItems[newIndex]

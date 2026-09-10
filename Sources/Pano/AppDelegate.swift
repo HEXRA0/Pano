@@ -96,14 +96,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         floatingPanel.onArrowDown = { [weak self] in
             guard let self = self else { return }
-            let count = self.getFilteredItems().count
-            SelectionManager.shared.moveDown(totalCount: count)
+            let filtered = self.getFilteredItems()
+            SelectionManager.shared.moveDown(totalCount: filtered.count, items: filtered)
         }
 
         floatingPanel.onArrowUp = { [weak self] in
             guard let self = self else { return }
-            let count = self.getFilteredItems().count
-            SelectionManager.shared.moveUp(totalCount: count)
+            let filtered = self.getFilteredItems()
+            SelectionManager.shared.moveUp(totalCount: filtered.count, items: filtered)
         }
 
         floatingPanel.onReturnKey = { [weak self] in
