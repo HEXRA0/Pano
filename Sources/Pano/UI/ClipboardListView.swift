@@ -40,7 +40,7 @@ public struct ClipboardListView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Header: Search Bar
+            // Header: Spotlight-Style Search Bar
             searchHeader
                 .onHover { hovering in
                     if hovering {
@@ -48,8 +48,7 @@ public struct ClipboardListView: View {
                     }
                 }
 
-            Divider()
-                .opacity(0.4)
+            hairlineDivider
 
             // Content: List of clips
             if filteredItems.isEmpty {
@@ -63,10 +62,9 @@ public struct ClipboardListView: View {
                 itemsList
             }
 
-            Divider()
-                .opacity(0.4)
+            hairlineDivider
 
-            // Footer: Info & Quick actions
+            // Footer: Control Strip
             footerView
                 .onHover { hovering in
                     if hovering {
@@ -74,8 +72,15 @@ public struct ClipboardListView: View {
                     }
                 }
         }
-        .frame(width: 360, height: 460)
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+        .frame(width: 380, height: 490)
+        .background(
+            VisualEffectView(material: .popover, blendingMode: .behindWindow)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
+        )
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 isSearchFocused = true
@@ -87,16 +92,22 @@ public struct ClipboardListView: View {
         }
     }
 
-    // MARK: - Search Header
+    private var hairlineDivider: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.08))
+            .frame(height: 0.5)
+    }
+
+    // MARK: - Spotlight-Style Search Header
     private var searchHeader: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-                .font(.system(size: 14))
+                .font(.system(size: 15, weight: .medium))
 
-            TextField("Pano'da ara...", text: $searchText)
+            TextField("Pano'da ara veya yapıştır...", text: $searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(.system(size: 14, weight: .regular))
                 .focused($isSearchFocused)
                 .onSubmit {
                     let index = selection.selectedIndex
@@ -111,10 +122,11 @@ public struct ClipboardListView: View {
                 Button(action: {
                     searchText = ""
                     selection.reset()
+                    onDismissPreview?()
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
-                        .font(.system(size: 13))
+                        .font(.system(size: 14))
                 }
                 .buttonStyle(.plain)
             }
@@ -153,6 +165,7 @@ public struct ClipboardListView: View {
                     Text("Öğe Seç / Kopyala: Enter veya Tıkla")
                     Text("Hızlı Seçim: ⌘1 ... ⌘9")
                     Text("Pencereyi Kapat: ESC")
+                    Text("Öğeyi Sil: Delete veya ⌘⌫")
                 }
 
                 Divider()
@@ -171,8 +184,8 @@ public struct ClipboardListView: View {
             } label: {
                 Image(systemName: "gearshape")
                     .foregroundColor(.secondary)
-                    .font(.system(size: 12))
-                    .padding(4)
+                    .font(.system(size: 13))
+                    .padding(5)
                     .background(Color.primary.opacity(0.06))
                     .clipShape(Circle())
             }
@@ -184,7 +197,7 @@ public struct ClipboardListView: View {
                 Image(systemName: "xmark")
                     .foregroundColor(.secondary)
                     .font(.system(size: 11, weight: .bold))
-                    .padding(4)
+                    .padding(5)
                     .background(Color.primary.opacity(0.06))
                     .clipShape(Circle())
             }
@@ -192,7 +205,7 @@ public struct ClipboardListView: View {
             .help("Kapat (ESC)")
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Items List
@@ -224,7 +237,7 @@ public struct ClipboardListView: View {
         }
     }
 
-    // MARK: - Single Item Row
+    // MARK: - Single Item Row (macOS Spotlight / Shortcuts Style)
     private func itemRow(item: ClipboardItem, index: Int) -> some View {
         let isSelected = selection.selectedIndex == index
         let shortcutNumber = index < 9 ? "\(index + 1)" : nil
@@ -232,11 +245,11 @@ public struct ClipboardListView: View {
         return Button(action: {
             onSelectItem(item)
         }) {
-            HStack(spacing: 10) {
-                // Type Icon
-                itemTypeIcon(for: item, isSelected: isSelected)
+            HStack(spacing: 11) {
+                // Apple-style Squircle Type Badge
+                itemTypeBadge(for: item, isSelected: isSelected)
 
-                // Preview Text & Info
+                // Text & Metadata
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.cleanPreview)
                         .font(.system(size: 12.5, weight: item.isPinned ? .semibold : .regular))
@@ -246,30 +259,32 @@ public struct ClipboardListView: View {
 
                     HStack(spacing: 6) {
                         Text(item.formattedTime)
-                            .font(.system(size: 10))
-                            .foregroundColor(isSelected ? .white.opacity(0.75) : .secondary)
+                            .font(.system(size: 10.5))
+                            .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
 
                         if item.type == .text, item.charCount > 0 {
-                            Text("• \(item.charCount) karakter")
-                                .font(.system(size: 10))
-                                .foregroundColor(isSelected ? .white.opacity(0.65) : .secondary.opacity(0.8))
+                            Text("•  \(item.charCount) karakter")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(isSelected ? .white.opacity(0.65) : .secondary.opacity(0.75))
                         }
                     }
                 }
 
                 Spacer(minLength: 4)
 
-                // Actions: Pin / Delete
-                HStack(spacing: 6) {
+                // Actions: Delete & Pin
+                HStack(spacing: 5) {
                     if isSelected {
                         Button(action: {
                             store.delete(id: item.id)
                             selection.clamp(totalCount: filteredItems.count - 1)
                         }) {
                             Image(systemName: "trash")
-                                .font(.system(size: 11))
-                                .foregroundColor(isSelected ? .white.opacity(0.85) : .red.opacity(0.8))
+                                .font(.system(size: 10.5))
+                                .foregroundColor(isSelected ? .white.opacity(0.9) : .red.opacity(0.8))
                                 .padding(4)
+                                .background(Color.white.opacity(0.18))
+                                .clipShape(Circle())
                         }
                         .buttonStyle(.plain)
                         .help("Sil (⌫ veya ⌘⌫)")
@@ -280,34 +295,49 @@ public struct ClipboardListView: View {
                             store.togglePin(id: item.id)
                         }) {
                             Image(systemName: item.isPinned ? "pin.fill" : "pin")
-                                .font(.system(size: 11))
+                                .font(.system(size: 10.5))
                                 .foregroundColor(
                                     isSelected
-                                        ? (item.isPinned ? .yellow : .white.opacity(0.85))
+                                        ? (item.isPinned ? .yellow : .white.opacity(0.9))
                                         : (item.isPinned ? .orange : .secondary)
                                 )
                                 .padding(4)
+                                .background(isSelected ? Color.white.opacity(0.18) : Color.clear)
+                                .clipShape(Circle())
                         }
                         .buttonStyle(.plain)
                         .help(item.isPinned ? "Sabitlemeyi Kaldır" : "Yukarı Sabitle")
                     }
 
-                    // Shortcut Badge (⌘1 ... ⌘9)
+                    // Apple-style Keyboard Keycap Badge (⌘1 ... ⌘9)
                     if let num = shortcutNumber {
                         Text("⌘\(num)")
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
                             .foregroundColor(isSelected ? .white : .secondary)
                             .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(isSelected ? Color.white.opacity(0.25) : Color.primary.opacity(0.07))
-                            .cornerRadius(4)
+                            .padding(.vertical, 2.5)
+                            .background(
+                                isSelected
+                                    ? Color.white.opacity(0.25)
+                                    : Color.primary.opacity(0.06)
+                            )
+                            .cornerRadius(5)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .stroke(
+                                        isSelected
+                                            ? Color.white.opacity(0.3)
+                                            : Color.primary.opacity(0.08),
+                                        lineWidth: 0.5
+                                    )
+                            )
                     }
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(
                         isSelected
                             ? Color.accentColor
@@ -331,6 +361,64 @@ public struct ClipboardListView: View {
         }
     }
 
+    // MARK: - Apple Squircle Type Badge
+    @ViewBuilder
+    private func itemTypeBadge(for item: ClipboardItem, isSelected: Bool) -> some View {
+        switch item.type {
+        case .text:
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.25) : Color.blue.opacity(0.14))
+                Image(systemName: "doc.text.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? .white : .blue)
+            }
+            .frame(width: 26, height: 26)
+
+        case .image:
+            if let data = item.imageData, let nsImage = NSImage(data: data) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 26, height: 26)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
+                    )
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(isSelected ? Color.white.opacity(0.25) : Color.purple.opacity(0.14))
+                    Image(systemName: "photo.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(isSelected ? .white : .purple)
+                }
+                .frame(width: 26, height: 26)
+            }
+
+        case .fileURL:
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.25) : Color.green.opacity(0.14))
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? .white : .green)
+            }
+            .frame(width: 26, height: 26)
+
+        case .rtf:
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.25) : Color.orange.opacity(0.14))
+                Image(systemName: "doc.richtext.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? .white : .orange)
+            }
+            .frame(width: 26, height: 26)
+        }
+    }
+
     private func isImageItem(_ item: ClipboardItem) -> Bool {
         if item.type == .image { return true }
         if let paths = item.filePaths, let first = paths.first {
@@ -340,74 +428,68 @@ public struct ClipboardListView: View {
         return false
     }
 
-    // MARK: - Type Icon
-    @ViewBuilder
-    private func itemTypeIcon(for item: ClipboardItem, isSelected: Bool) -> some View {
-        switch item.type {
-        case .text:
-            Image(systemName: "text.alignleft")
-                .font(.system(size: 13))
-                .foregroundColor(isSelected ? .white : .blue)
-                .frame(width: 18)
-        case .image:
-            if let data = item.imageData, let nsImage = NSImage(data: data) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 22, height: 22)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
-                    )
-            } else {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(.system(size: 12))
-                    .foregroundColor(isSelected ? .white : .indigo)
-                    .frame(width: 18)
-            }
-        case .fileURL:
-            Image(systemName: "doc")
-                .font(.system(size: 13))
-                .foregroundColor(isSelected ? .white : .green)
-                .frame(width: 18)
-        case .rtf:
-            Image(systemName: "doc.richtext")
-                .font(.system(size: 13))
-                .foregroundColor(isSelected ? .white : .orange)
-                .frame(width: 18)
-        }
-    }
-
-    // MARK: - Empty State
+    // MARK: - Empty State (Apple System Style)
     private var emptyView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             Spacer()
-            Image(systemName: searchText.isEmpty ? "doc.on.clipboard" : "magnifyingglass")
-                .font(.system(size: 36))
-                .foregroundColor(.secondary.opacity(0.5))
 
-            Text(searchText.isEmpty ? "Pano Geçmişi Boş" : "Sonuç bulunamadı")
-                .font(.system(size: 13, weight: .medium))
+            ZStack {
+                Circle()
+                    .fill(Color.primary.opacity(0.04))
+                    .frame(width: 68, height: 68)
+
+                Image(systemName: searchText.isEmpty ? "doc.on.clipboard" : "magnifyingglass")
+                    .font(.system(size: 28))
+                    .foregroundColor(.secondary.opacity(0.7))
+            }
+
+            VStack(spacing: 4) {
+                Text(searchText.isEmpty ? "Pano Geçmişi Boş" : "Eşleşen Sonuç Yok")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                Text(searchText.isEmpty ? "Kopyaladığınız metinler ve görseller burada listelenecektir." : "Farklı bir arama terimi deneyin.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            if searchText.isEmpty {
+                HStack(spacing: 5) {
+                    Text("⇧⌘C")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.primary.opacity(0.06))
+                        .cornerRadius(5)
+
+                    Text("veya")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+
+                    Text("⇧⌘V")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.primary.opacity(0.06))
+                        .cornerRadius(5)
+                }
                 .foregroundColor(.secondary)
+            }
 
-            Text(searchText.isEmpty ? "Kopyaladığınız metinler ve görseller burada görünecektir." : "Farklı bir arama terimi deneyin.")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary.opacity(0.8))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Footer View (With Inline Confirmation)
+    // MARK: - Footer Control Strip
     private var footerView: some View {
         VStack(spacing: 0) {
             if isConfirmingClear {
-                HStack(spacing: 6) {
-                    Text("Temizle:")
-                        .font(.system(size: 11, weight: .medium))
+                HStack(spacing: 8) {
+                    Text("Geçmişi temizle:")
+                        .font(.system(size: 11.5, weight: .medium))
                         .foregroundColor(.secondary)
 
                     Spacer(minLength: 2)
@@ -421,13 +503,9 @@ public struct ClipboardListView: View {
                     }) {
                         Text("Sabitlenenler Hariç")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color.orange.opacity(0.12))
-                            .cornerRadius(4)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
 
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {
@@ -439,12 +517,9 @@ public struct ClipboardListView: View {
                         Text("Tümü")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.red)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color.red.opacity(0.12))
-                            .cornerRadius(4)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
 
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {
@@ -461,14 +536,21 @@ public struct ClipboardListView: View {
                     .buttonStyle(.plain)
                     .help("Vazgeç")
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .background(Color.primary.opacity(0.03))
             } else {
                 HStack(spacing: 8) {
                     Text("\(filteredItems.count) öğe")
-                        .font(.system(size: 11))
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundColor(.secondary)
+
+                    Text("•")
+                        .foregroundColor(.secondary.opacity(0.5))
+
+                    Text("↵ kopyala  •  ⌫ sil")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(.secondary.opacity(0.7))
 
                     Spacer()
 
@@ -479,14 +561,15 @@ public struct ClipboardListView: View {
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "trash")
+                                .font(.system(size: 11))
                             Text("Temizle")
+                                .font(.system(size: 11))
                         }
-                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3.5)
                         .background(Color.primary.opacity(0.05))
-                        .cornerRadius(4)
+                        .cornerRadius(5)
                     }
                     .buttonStyle(.plain)
 
@@ -496,22 +579,21 @@ public struct ClipboardListView: View {
                         Image(systemName: "power")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 3)
+                            .padding(5)
                             .background(Color.primary.opacity(0.05))
-                            .cornerRadius(4)
+                            .clipShape(Circle())
                             .help("Pano'dan Çık")
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .padding(.vertical, 9)
             }
         }
     }
 }
 
-// MARK: - Visual Effect View for Native Frosted Glass Look
+// MARK: - Visual Effect View for Native macOS Frosted Glass
 public struct VisualEffectView: NSViewRepresentable {
     let material: NSVisualEffectView.Material
     let blendingMode: NSVisualEffectView.BlendingMode

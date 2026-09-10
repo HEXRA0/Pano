@@ -55,8 +55,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupPanel() {
-        let panelWidth: CGFloat = 360
-        let panelHeight: CGFloat = 460
+        let panelWidth: CGFloat = 380
+        let panelHeight: CGFloat = 490
         let panelRect = NSRect(x: 0, y: 0, width: panelWidth, height: panelHeight)
 
         let floatingPanel = FloatingPanel(contentRect: panelRect)
